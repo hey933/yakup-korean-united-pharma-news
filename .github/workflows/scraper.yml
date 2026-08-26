@@ -2,11 +2,8 @@ name: 야쿱 뉴스 크롤러
 
 on:
   schedule:
-    # 매일 자정(UTC)에 실행
-    # 한국 시간으로는 오전 9시
     - cron: '0 0 * * *'
   
-  # 수동 실행 가능
   workflow_dispatch:
 
 jobs:
@@ -15,12 +12,13 @@ jobs:
     
     steps:
     - name: 저장소 체크아웃
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     
-    - name: Python 설정
-      uses: actions/setup-python@v4
+    - name: Python 3.11 설정
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
+        cache: 'pip'
     
     - name: 의존성 설치
       run: |
@@ -31,18 +29,9 @@ jobs:
       run: python scraper.py
     
     - name: 변경사항 커밋 및 푸시
+      if: success()
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        
-        if git diff --quiet; then
-          echo "변경사항 없음"
-        else
-          git add data/articles.json
-          git commit -m "🤖 자동 업데이트: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"
-          git push
-        fi
-    
-    - name: 실행 결과 알림
-      if: always()
-      run: echo "✓ 크롤러 작업 완료"
+        git add -A
+        git diff --cached --exit-code || (git commit -m "🤖 자동 업데이트: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" && git push)
